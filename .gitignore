@@ -1,0 +1,8 @@
+config.py
+seen_properties.json
+.env
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+*.log

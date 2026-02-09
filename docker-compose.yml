@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  property-monitor:
+    build: .
+    container_name: dortmund-property-monitor
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Europe/Berlin
+    # Uncomment below to use environment variables instead of config.py
+    # environment:
+    #   - EMAIL_ADDRESS=your_email@gmail.com
+    #   - EMAIL_PASSWORD=your_app_password
+    #   - SMTP_SERVER=smtp.gmail.com
+    #   - SMTP_PORT=587
+    #   - CHECK_INTERVAL_MINUTES=5

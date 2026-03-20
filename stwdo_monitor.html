@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STWDO Monitor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f0e;
+    --surface: #151817;
+    --surface2: #1c1f1d;
+    --border: #2a2e2c;
+    --green: #4ade80;
+    --green-dim: #1a3d28;
+    --green-text: #86efac;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #e8ece9;
+    --muted: #6b7570;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--green);
+    letter-spacing: 0.02em;
+  }
+
+  header span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .panel.full { grid-column: 1 / -1; }
+
+  .panel-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  input[type="email"], input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    margin-bottom: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus { border-color: var(--green); }
+  input::placeholder { color: var(--muted); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 4px; }
+
+  button {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  button:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { border-color: var(--green); color: var(--green); }
+  button.active { background: var(--green-dim); border-color: var(--green); color: var(--green-text); }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 2s infinite; }
+  .dot.err { background: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .status-text { font-family: var(--mono); font-size: 13px; }
+  .status-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .metric {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+  }
+  .metric-val { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--green); }
+  .metric-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.05em; }
+
+  .progress-track {
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 14px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 1s linear;
+    width: 0%;
+  }
+
+  .log-wrap {
+    max-height: 180px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .log-wrap::-webkit-scrollbar { width: 4px; }
+  .log-wrap::-webkit-scrollbar-track { background: var(--surface); }
+  .log-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-row {
+    display: flex;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  .log-row:last-child { border-bottom: none; }
+  .log-t { color: var(--muted); flex-shrink: 0; }
+  .log-m { color: var(--text); }
+  .log-ok { color: var(--green); }
+  .log-err { color: var(--red); }
+
+  .listings-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .listing-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    border-left: 3px solid var(--green);
+  }
+
+  .listing-title { font-weight: 500; font-size: 13px; margin-bottom: 4px; }
+  .listing-meta { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+
+  .empty { text-align: center; padding: 24px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .tag { display: inline-block; background: var(--green-dim); color: var(--green-text); font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-left: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>// STWDO_MONITOR</h1>
+  <span>stwdo.de residential listings · Dortmund</span>
+</header>
+
+<div class="grid">
+  <div class="panel">
+    <div class="panel-label">Configuration</div>
+    <input type="email" id="emailInput" placeholder="alert@email.com" />
+    <input type="text" id="keywordInput" placeholder="Keywords: Dortmund, 2-Zimmer..." value="Dortmund" />
+    <div class="btn-row">
+      <button class="primary" id="startBtn" onclick="startMonitor()">▶ start</button>
+      <button id="stopBtn" onclick="stopMonitor()" disabled>■ stop</button>
+      <button id="nowBtn" onclick="runCheck(true)">⟳ now</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Status</div>
+    <div class="status-indicator">
+      <div class="dot" id="dot"></div>
+      <div>
+        <div class="status-text" id="statusText">idle</div>
+        <div class="status-sub" id="statusSub">enter email and click start</div>
+      </div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-val" id="mChecks">0</div><div class="metric-lbl">checks</div></div>
+      <div class="metric"><div class="metric-val" id="mListings">0</div><div class="metric-lbl">listings</div></div>
+      <div class="metric"><div class="metric-val" id="mEmails">0</div><div class="metric-lbl">emails sent</div></div>
+    </div>
+    <div class="progress-track"><div class="progress-bar" id="progress"></div></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel full">
+    <div class="panel-label">Latest listings <span id="listingTag"></span></div>
+    <div id="listingsEl"><div class="empty">// no data yet</div></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel full">
+    <div class="panel-label">Activity log</div>
+    <div class="log-wrap" id="logEl">
+      <div class="log-row"><span class="log-t">--:--</span><span class="log-m">awaiting start...</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let timer = null, progressTimer = null, progressSecs = 0;
+  let checks = 0, emails = 0;
+  let prevListingsHash = null;
+  const INTERVAL = 300;
+
+  function ts() { return new Date().toTimeString().slice(0,5); }
+
+  function log(msg, cls='') {
+    const el = document.getElementById('logEl');
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    row.innerHTML = `<span class="log-t">${ts()}</span><span class="log-m ${cls}">${msg}</span>`;
+    el.insertBefore(row, el.firstChild);
+    while(el.children.length > 60) el.removeChild(el.lastChild);
+  }
+
+  function setStatus(text, sub, dotCls) {
+    document.getElementById('statusText').textContent = text;
+    document.getElementById('statusSub').textContent = sub;
+    const d = document.getElementById('dot');
+    d.className = 'dot' + (dotCls ? ' ' + dotCls : '');
+  }
+
+  function updateMetrics(listingCount) {
+    document.getElementById('mChecks').textContent = checks;
+    document.getElementById('mListings').textContent = listingCount ?? document.getElementById('mListings').textContent;
+    document.getElementById('mEmails').textContent = emails;
+  }
+
+  function startProgress() {
+    progressSecs = 0;
+    clearInterval(progressTimer);
+    document.getElementById('progress').style.width = '0%';
+    progressTimer = setInterval(() => {
+      progressSecs++;
+      document.getElementById('progress').style.width = Math.min(progressSecs / INTERVAL * 100, 100) + '%';
+    }, 1000);
+  }
+
+  function startMonitor() {
+    const email = document.getElementById('emailInput').value.trim();
+    if (!email || !email.includes('@')) { log('valid email required', 'log-err'); return; }
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    document.getElementById('startBtn').className = 'active';
+    setStatus('monitoring', 'checks every 5 min · running first check...', 'on');
+    log('monitor started');
+    runCheck(false);
+    timer = setInterval(() => runCheck(false), INTERVAL * 1000);
+  }
+
+  function stopMonitor() {
+    clearInterval(timer); clearInterval(progressTimer); timer = null;
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+    document.getElementById('startBtn').className = 'primary';
+    document.getElementById('progress').style.width = '0%';
+    setStatus('stopped', 'click start to resume', '');
+    log('monitor stopped');
+  }
+
+  async function runCheck(manual) {
+    const email = document.getElementById('emailInput').value.trim();
+    const kw = document.getElementById('keywordInput').value.trim() || 'Dortmund';
+    if (!email && !manual) return;
+
+    if (manual) log('manual check triggered...');
+    setStatus('checking...', 'fetching listings from stwdo.de', 'on');
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [{
+            role: 'user',
+            content: `Search for current housing listings on https://www.stwdo.de/wohnen/aktuelle-wohnangebote and return ALL available listings as a JSON array. Each item should have: title, location, size, rent, rooms, details, url. Focus on listings matching: ${kw}. Return ONLY a valid JSON array, no other text or markdown.`
+          }]
+        })
+      });
+
+      if (!resp.ok) throw new Error(`API ${resp.status}`);
+      const data = await resp.json();
+      const textContent = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+
+      let listings = [];
+      const match = textContent.match(/\[[\s\S]*?\]/);
+      if (match) { try { listings = JSON.parse(match[0]); } catch(e) {} }
+
+      checks++;
+      updateMetrics(listings.length);
+      renderListings(listings);
+
+      const kwList = kw.toLowerCase().split(',').map(k => k.trim());
+      const matched = listings.filter(l => kwList.some(k => JSON.stringify(l).toLowerCase().includes(k)));
+
+      log(`check done — ${listings.length} listing(s), ${matched.length} match keyword(s)`);
+
+      const hash = JSON.stringify(matched);
+      if (matched.length > 0 && hash !== prevListingsHash) {
+        log(`new matching listings found (${matched.length}) — sending alert`, 'log-ok');
+        prevListingsHash = hash;
+        if (email) await sendEmail(email, kw, matched);
+      }
+
+      if (timer) {
+        startProgress();
+        setStatus('monitoring', `last check ${ts()} · next in 5 min`, 'on');
+      } else {
+        setStatus('idle', `last check ${ts()}`, '');
+      }
+
+    } catch(err) {
+      log('error: ' + err.message, 'log-err');
+      setStatus('error', err.message, 'err');
+    }
+  }
+
+  function renderListings(listings) {
+    const el = document.getElementById('listingsEl');
+    const tag = document.getElementById('listingTag');
+    if (!listings.length) {
+      el.innerHTML = '<div class="empty">// no listings found</div>';
+      tag.textContent = '';
+      return;
+    }
+    tag.innerHTML = `<span class="tag">${listings.length} found</span>`;
+    el.innerHTML = '<div class="listings-list">' + listings.map(l => `
+      <div class="listing-card">
+        <div class="listing-title">${l.title || 'Listing'}</div>
+        <div class="listing-meta">${[l.location, l.rooms, l.size, l.rent].filter(Boolean).join(' · ')}</div>
+        ${l.details ? `<div class="listing-meta" style="margin-top:4px;color:#6b7570">${l.details}</div>` : ''}
+      </div>`).join('') + '</div>';
+  }
+
+  async function sendEmail(toEmail, kw, listings) {
+    log('sending gmail alert...');
+    const body = `New housing listings found on stwdo.de matching "${kw}":\n\n` +
+      listings.map(l => `• ${l.title || 'Listing'}\n  ${[l.location, l.rooms, l.size, l.rent].filter(Boolean).join(' · ')}${l.details ? '\n  ' + l.details : ''}`).join('\n\n') +
+      '\n\nView listings: https://www.stwdo.de/wohnen/aktuelle-wohnangebote\n\n— STWDO Monitor';
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 500,
+          mcp_servers: [{ type: 'url', url: 'https://gmail.mcp.claude.com/mcp', name: 'gmail-mcp' }],
+          messages: [{
+            role: 'user',
+            content: `Send an email via Gmail:\nTo: ${toEmail}\nSubject: New Dortmund housing listing on stwdo.de\nBody:\n${body}\n\nSend it now.`
+          }]
+        })
+      });
+      if (resp.ok) {
+        emails++;
+        updateMetrics(null);
+        log(`email sent to ${toEmail}`, 'log-ok');
+      } else {
+        log('email send failed — check gmail connection', 'log-err');
+      }
+    } catch(e) {
+      log('email error: ' + e.message, 'log-err');
+    }
+  }
+</script>
+</body>
+</html>
